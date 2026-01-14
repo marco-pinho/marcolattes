@@ -29,53 +29,67 @@ def load_qualis_data(main_qualis_file):
         st.error(f"Erro ao ler o arquivo Qualis: {e}. Verifique se o arquivo é Excel válido.")
         return pd.DataFrame()
 
-def process_html_files(folder):
-    """Processa todos os arquivos HTML em uma pasta para extrair dados de artigos."""
-    base_path = os.path.join(os.getcwd(), folder)
-    if not os.path.isdir(base_path):
-        return pd.DataFrame()
-
-    html_files = [os.path.join(base_path, f) for f in os.listdir(base_path) if f.endswith(".html")]
-
+@st.cache_data(show_spinner="Carregando todos os currículos...")
+def process_all_html_files():
+    """Processa TODOS os arquivos HTML de permanentes e colaboradores."""
     all_articles = []
 
-    for file_path in html_files:
-        try:
-            with open(file_path, 'r', encoding='latin-1') as f:
-                html_content = f.read()
+    # Processar ambas as pastas
+    folders = {
+        "permanentes": "Permanente",
+        "colaboradores": "Colaborador"
+    }
 
-            soup = BeautifulSoup(html_content, 'lxml')
-            nome_arquivo = os.path.splitext(os.path.basename(file_path))[0]
+    for folder_name, categoria in folders.items():
+        base_path = os.path.join(os.getcwd(), folder_name)
+        if not os.path.isdir(base_path):
+            continue
 
-            articles = soup.select("#artigos-completos .artigo-completo")
+        html_files = [os.path.join(base_path, f) for f in os.listdir(base_path) if f.endswith(".html")]
 
-            for article in articles:
-                cvuri = article.select_one("span.citacoes, span.citado")
-                if not cvuri: continue
-                cvuri_text = cvuri.get('cvuri', '')
+        for file_path in html_files:
+            try:
+                with open(file_path, 'r', encoding='latin-1') as f:
+                    html_content = f.read()
 
-                issn_match = re.search(r"(?<=issn=)([A-Za-z0-9]{4})([A-Za-z0-9]{4})", cvuri_text)
-                issn = f"{issn_match.group(1)}-{issn_match.group(2)}" if issn_match else None
+                soup = BeautifulSoup(html_content, 'lxml')
+                nome_arquivo = os.path.splitext(os.path.basename(file_path))[0]
 
-                doi_match = re.search(r"(?<=doi=)[^&]+", cvuri_text)
-                doi = doi_match.group(0) if doi_match else "N/A"
+                articles = soup.select("#artigos-completos .artigo-completo")
 
-                titulo_match = re.search(r"(?<=titulo=)[^&]+", cvuri_text)
-                titulo = titulo_match.group(0) if titulo_match else "Título não encontrado"
+                for article in articles:
+                    cvuri = article.select_one("span.citacoes, span.citado")
+                    if not cvuri: continue
+                    cvuri_text = cvuri.get('cvuri', '')
 
-                revista_match = re.search(r"(?<=nomePeriodico=)[^&]+", cvuri_text)
-                revista = revista_match.group(0) if revista_match else "Revista não encontrada"
+                    issn_match = re.search(r"(?<=issn=)([A-Za-z0-9]{4})([A-Za-z0-9]{4})", cvuri_text)
+                    issn = f"{issn_match.group(1)}-{issn_match.group(2)}" if issn_match else None
 
-                ano_node = article.select_one("span.informacao-artigo[data-tipo-ordenacao='ano']")
-                ano = ano_node.get_text(strip=True) if ano_node else None
+                    doi_match = re.search(r"(?<=doi=)[^&]+", cvuri_text)
+                    doi = doi_match.group(0) if doi_match else "N/A"
 
-                all_articles.append({
-                    "Nome": nome_arquivo, "ISSN": issn, "DOI": doi, "Titulo": titulo,
-                    "Revista": revista, "Ano": ano, "WOS": 0, "Scopus": 0 # Placeholder
-                })
-        except Exception as e:
-            # Silenciar erros dentro do cache
-            pass
+                    titulo_match = re.search(r"(?<=titulo=)[^&]+", cvuri_text)
+                    titulo = titulo_match.group(0) if titulo_match else "Título não encontrado"
+
+                    revista_match = re.search(r"(?<=nomePeriodico=)[^&]+", cvuri_text)
+                    revista = revista_match.group(0) if revista_match else "Revista não encontrada"
+
+                    ano_node = article.select_one("span.informacao-artigo[data-tipo-ordenacao='ano']")
+                    ano = ano_node.get_text(strip=True) if ano_node else None
+
+                    all_articles.append({
+                        "Nome": nome_arquivo,
+                        "Categoria": categoria,
+                        "ISSN": issn,
+                        "DOI": doi,
+                        "Titulo": titulo,
+                        "Revista": revista,
+                        "Ano": ano,
+                        "WOS": 0,
+                        "Scopus": 0
+                    })
+            except Exception as e:
+                pass
 
     df = pd.DataFrame(all_articles)
     df["Ano"] = pd.to_numeric(df["Ano"], errors='coerce')
@@ -99,22 +113,7 @@ def to_excel(dfs_dict):
     return output.getvalue()
 
 # --- UI Principal ---
-
-# --- Seletor de Categoria ---
-categoria = st.sidebar.radio(
-    "📂 Selecione a categoria:",
-    options=["Professores Permanentes", "Professores Colaboradores"],
-    index=0  # Padrão: Permanentes
-)
-
-# Mapear seleção para nome da pasta
-pasta_map = {
-    "Professores Permanentes": "permanentes",
-    "Professores Colaboradores": "colaboradores"
-}
-folder_path = pasta_map[categoria]
-
-st.title(f"📊 Análise de Produção Científica - {categoria}")
+st.title("📊 Análise de Produção Científica - PGCM UERJ")
 
 # --- Carregamento e Processamento dos Dados ---
 # Carrega os arquivos Qualis diretamente da pasta 'data'
@@ -125,40 +124,58 @@ if not os.path.exists(main_qualis_path):
     st.stop()
 
 qualis_df = load_qualis_data(main_qualis_path)
-
-with st.spinner(f"Processando currículos de {categoria}..."):
-    articles_df = process_html_files(folder=folder_path)
+articles_df = process_all_html_files()
 
 if qualis_df.empty or articles_df.empty:
     st.error("Falha no carregamento dos dados. Verifique os arquivos e o diretório HTML.")
     st.stop()
-    
+
 banco_final = calculate_points(articles_df, qualis_df)
 
 # --- Barra Lateral: Filtros ---
 st.sidebar.header("Filtros de Análise")
-anos_disponiveis = sorted(banco_final["Ano"].dropna().unique().astype(int))
+
+# Filtro de Categoria
+categorias_disponiveis = sorted(banco_final["Categoria"].unique())
+categorias_selecionadas = st.sidebar.multiselect(
+    "📂 Filtrar por categoria:",
+    options=categorias_disponiveis,
+    default=categorias_disponiveis
+)
+
+# Filtrar por categoria primeiro
+banco_filtrado_categoria = banco_final[banco_final["Categoria"].isin(categorias_selecionadas)]
+
+# Anos disponíveis após filtro de categoria
+anos_disponiveis = sorted(banco_filtrado_categoria["Ano"].dropna().unique().astype(int))
 if not anos_disponiveis:
     st.sidebar.warning("Não há anos disponíveis para filtro nos dados processados.")
     st.stop()
-    
-# O seletor de ano é dinâmico e se ajustará automaticamente aos anos presentes nos dados.
-# Isso garante que anos futuros (2026, 2027, etc.) sejam incluídos no filtro.
+
+# Seletor de ano
 ano_inicio, ano_fim = st.sidebar.select_slider(
-    "Selecione o Período de Análise:",
+    "📅 Selecione o Período de Análise:",
     options=anos_disponiveis,
     value=(min(anos_disponiveis), max(anos_disponiveis))
 )
 
-professores_disponiveis = sorted(banco_final["Nome"].unique())
+# Professores disponíveis após filtros de categoria e ano
+professores_disponiveis = sorted(
+    banco_filtrado_categoria[
+        (banco_filtrado_categoria["Ano"] >= ano_inicio) &
+        (banco_filtrado_categoria["Ano"] <= ano_fim)
+    ]["Nome"].unique()
+)
+
 professores_selecionados = st.sidebar.multiselect(
-    "Selecione os Professores:",
+    "👥 Selecione os Professores:",
     options=professores_disponiveis,
     default=professores_disponiveis
 )
 
-# Aplicar filtros
+# Aplicar todos os filtros em cascata
 df_filtrado = banco_final[
+    (banco_final["Categoria"].isin(categorias_selecionadas)) &
     (banco_final["Ano"] >= ano_inicio) &
     (banco_final["Ano"] <= ano_fim) &
     (banco_final["Nome"].isin(professores_selecionados))
@@ -168,7 +185,7 @@ df_filtrado = banco_final[
 tab1, tab2, tab3 = st.tabs(["📈 Dashboard Geral", "👩‍🏫 Análise Individual", "📄 Dados Completos"])
 
 with tab1:
-    st.header(f"Dashboard Geral - {categoria} ({ano_inicio} - {ano_fim})")
+    st.header(f"Dashboard Geral ({ano_inicio} - {ano_fim})")
     if df_filtrado.empty:
         st.warning("Nenhum dado encontrado para os filtros selecionados.")
     else:
