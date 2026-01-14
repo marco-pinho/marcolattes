@@ -110,11 +110,17 @@ def calculate_points(_df, qualis_df):
     return df_merged
 
 def to_excel(dfs_dict):
-    """Escreve um dicionário de DataFrames para um objeto BytesIO em formato Excel."""
+    """Escreve um dicionário de DataFrames para um objeto BytesIO em formato Excel com encoding UTF-8."""
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    # Configurar openpyxl para UTF-8
+    with pd.ExcelWriter(output, engine='openpyxl', engine_kwargs={'options': {'strings_to_urls': False}}) as writer:
         for sheet_name, df in dfs_dict.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            # Converter DataFrame para garantir strings UTF-8
+            df_copy = df.copy()
+            for col in df_copy.columns:
+                if df_copy[col].dtype == 'object':
+                    df_copy[col] = df_copy[col].astype(str)
+            df_copy.to_excel(writer, sheet_name=sheet_name, index=False)
     return output.getvalue()
 
 # --- UI Principal ---
@@ -286,7 +292,14 @@ with tab3:
         df_display = df_filtrado.loc[:, ~df_filtrado.columns.str.startswith('Unnamed')]
         df_display = df_display.drop(columns=['WOS', 'Scopus'], errors='ignore')
         st.dataframe(df_display)
-        csv_data = df_display.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Baixar dados como CSV", data=csv_data, file_name=f"producao_filtrada_{ano_inicio}_{ano_fim}.csv", mime="text/csv")
+
+        # Gerar Excel dos dados completos
+        excel_data_completo = to_excel({"Dados_Completos": df_display})
+        st.download_button(
+            label="📥 Baixar dados completos em Excel",
+            data=excel_data_completo,
+            file_name=f"producao_completa_{ano_inicio}_{ano_fim}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 # --- Rodapé ---
 st.sidebar.info("Desenvolvido para análise de dados Lattes.")
