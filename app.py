@@ -30,7 +30,7 @@ def load_qualis_data(main_qualis_file):
         return pd.DataFrame()
 
 @st.cache_data
-def process_html_files(folder="html_permanente_2025"):
+def process_html_files(folder):
     """Processa todos os arquivos HTML em uma pasta para extrair dados de artigos."""
     base_path = os.path.join(os.getcwd(), folder)
     if not os.path.isdir(base_path):
@@ -104,7 +104,22 @@ def to_excel(dfs_dict):
     return output.getvalue()
 
 # --- UI Principal ---
-st.title("📊 Análise de Produção Científica - Lattes")
+
+# --- Seletor de Categoria ---
+categoria = st.sidebar.radio(
+    "📂 Selecione a categoria:",
+    options=["Professores Permanentes", "Pesquisadores Colaboradores"],
+    index=0  # Padrão: Permanentes
+)
+
+# Mapear seleção para nome da pasta
+pasta_map = {
+    "Professores Permanentes": "permanentes",
+    "Pesquisadores Colaboradores": "colaboradores"
+}
+folder_path = pasta_map[categoria]
+
+st.title(f"📊 Análise de Produção Científica - {categoria}")
 
 # --- Carregamento e Processamento dos Dados ---
 # Carrega os arquivos Qualis diretamente da pasta 'data'
@@ -115,7 +130,7 @@ if not os.path.exists(main_qualis_path):
     st.stop()
 
 qualis_df = load_qualis_data(main_qualis_path)
-articles_df = process_html_files()
+articles_df = process_html_files(folder=folder_path)
 
 if qualis_df.empty or articles_df.empty:
     st.error("Falha no carregamento dos dados. Verifique os arquivos e o diretório HTML.")
@@ -156,7 +171,7 @@ df_filtrado = banco_final[
 tab1, tab2, tab3 = st.tabs(["📈 Dashboard Geral", "👩‍🏫 Análise Individual", "📄 Dados Completos"])
 
 with tab1:
-    st.header(f"Dashboard Geral da Produção ({ano_inicio} - {ano_fim})")
+    st.header(f"Dashboard Geral - {categoria} ({ano_inicio} - {ano_fim})")
     if df_filtrado.empty:
         st.warning("Nenhum dado encontrado para os filtros selecionados.")
     else:
