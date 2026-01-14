@@ -29,37 +29,35 @@ def load_qualis_data(main_qualis_file):
         st.error(f"Erro ao ler o arquivo Qualis: {e}. Verifique se o arquivo é Excel válido.")
         return pd.DataFrame()
 
-@st.cache_data
+@st.cache_data(show_spinner="Processando currículos...")
 def process_html_files(folder):
     """Processa todos os arquivos HTML em uma pasta para extrair dados de artigos."""
     base_path = os.path.join(os.getcwd(), folder)
     if not os.path.isdir(base_path):
-        st.error(f"O diretório de HTML '{folder}' não foi encontrado em {os.getcwd()}.")
         return pd.DataFrame()
 
     html_files = [os.path.join(base_path, f) for f in os.listdir(base_path) if f.endswith(".html")]
-    
+
     all_articles = []
 
-    progress_bar = st.progress(0, text="Processando arquivos HTML...")
-    for i, file_path in enumerate(html_files):
+    for file_path in html_files:
         try:
             with open(file_path, 'r', encoding='latin-1') as f:
                 html_content = f.read()
 
             soup = BeautifulSoup(html_content, 'lxml')
             nome_arquivo = os.path.splitext(os.path.basename(file_path))[0]
-            
+
             articles = soup.select("#artigos-completos .artigo-completo")
 
             for article in articles:
                 cvuri = article.select_one("span.citacoes, span.citado")
                 if not cvuri: continue
                 cvuri_text = cvuri.get('cvuri', '')
-                
+
                 issn_match = re.search(r"(?<=issn=)([A-Za-z0-9]{4})([A-Za-z0-9]{4})", cvuri_text)
                 issn = f"{issn_match.group(1)}-{issn_match.group(2)}" if issn_match else None
-                
+
                 doi_match = re.search(r"(?<=doi=)[^&]+", cvuri_text)
                 doi = doi_match.group(0) if doi_match else "N/A"
 
@@ -77,11 +75,9 @@ def process_html_files(folder):
                     "Revista": revista, "Ano": ano, "WOS": 0, "Scopus": 0 # Placeholder
                 })
         except Exception as e:
-            st.warning(f"Erro ao processar o arquivo {file_path}: {e}")
-        
-        progress_bar.progress((i + 1) / len(html_files), text=f"Processando {os.path.basename(file_path)}")
+            # Silenciar erros dentro do cache
+            pass
 
-    progress_bar.empty()
     df = pd.DataFrame(all_articles)
     df["Ano"] = pd.to_numeric(df["Ano"], errors='coerce')
     return df
