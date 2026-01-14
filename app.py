@@ -108,14 +108,14 @@ def to_excel(dfs_dict):
 # --- Seletor de Categoria ---
 categoria = st.sidebar.radio(
     "📂 Selecione a categoria:",
-    options=["Professores Permanentes", "Pesquisadores Colaboradores"],
+    options=["Professores Permanentes", "Professores Colaboradores"],
     index=0  # Padrão: Permanentes
 )
 
 # Mapear seleção para nome da pasta
 pasta_map = {
     "Professores Permanentes": "permanentes",
-    "Pesquisadores Colaboradores": "colaboradores"
+    "Professores Colaboradores": "colaboradores"
 }
 folder_path = pasta_map[categoria]
 
