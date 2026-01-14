@@ -29,7 +29,6 @@ def load_qualis_data(main_qualis_file):
         st.error(f"Erro ao ler o arquivo Qualis: {e}. Verifique se o arquivo é Excel válido.")
         return pd.DataFrame()
 
-@st.cache_data(show_spinner="Processando currículos...")
 def process_html_files(folder):
     """Processa todos os arquivos HTML em uma pasta para extrair dados de artigos."""
     base_path = os.path.join(os.getcwd(), folder)
@@ -126,7 +125,9 @@ if not os.path.exists(main_qualis_path):
     st.stop()
 
 qualis_df = load_qualis_data(main_qualis_path)
-articles_df = process_html_files(folder=folder_path)
+
+with st.spinner(f"Processando currículos de {categoria}..."):
+    articles_df = process_html_files(folder=folder_path)
 
 if qualis_df.empty or articles_df.empty:
     st.error("Falha no carregamento dos dados. Verifique os arquivos e o diretório HTML.")
