@@ -112,8 +112,7 @@ def calculate_points(_df, qualis_df):
 def to_excel(dfs_dict):
     """Escreve um dicionário de DataFrames para um objeto BytesIO em formato Excel com encoding UTF-8."""
     output = BytesIO()
-    # Configurar openpyxl para UTF-8
-    with pd.ExcelWriter(output, engine='openpyxl', engine_kwargs={'options': {'strings_to_urls': False}}) as writer:
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for sheet_name, df in dfs_dict.items():
             # Converter DataFrame para garantir strings UTF-8
             df_copy = df.copy()
@@ -279,8 +278,10 @@ with tab2:
                 }).set_index('Categoria')
                 # Formatando para inteiros
                 st.dataframe(relacao_df.astype({'Número (n)': int, 'Pontuação Total': int}).style.format({'Porcentagem (%)': '{:.0f}%'}))
-                
-                excel_data = to_excel({"Producao_Principal": tabela_main, "Resumo_Qualis": resumo_qualis, "Relacao_A_B": relacao_df.reset_index().astype({'Número (n)': int, 'Pontuação Total': int}).style.format({'Porcentagem (%)': '{:.0f}%'})})
+
+                # Preparar DataFrame para Excel (sem styling)
+                relacao_df_excel = relacao_df.reset_index().astype({'Número (n)': int, 'Pontuação Total': int})
+                excel_data = to_excel({"Producao_Principal": tabela_main, "Resumo_Qualis": resumo_qualis, "Relacao_A_B": relacao_df_excel})
                 st.download_button(label=f"📥 Baixar Relatório Excel de {professor}", data=excel_data, file_name=f"{professor}_relatorio_{ano_inicio}_{ano_fim}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"download_button_{professor}")
 
 with tab3:
