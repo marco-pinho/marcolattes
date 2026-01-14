@@ -92,6 +92,11 @@ def process_all_html_files():
                 pass
 
     df = pd.DataFrame(all_articles)
+
+    # Garantir que a coluna Categoria existe mesmo se não houver artigos
+    if df.empty:
+        df = pd.DataFrame(columns=["Nome", "Categoria", "ISSN", "DOI", "Titulo", "Revista", "Ano", "WOS", "Scopus"])
+
     df["Ano"] = pd.to_numeric(df["Ano"], errors='coerce')
     return df
 
@@ -131,6 +136,12 @@ if qualis_df.empty or articles_df.empty:
     st.stop()
 
 banco_final = calculate_points(articles_df, qualis_df)
+
+# Verificar se a coluna Categoria existe
+if "Categoria" not in banco_final.columns:
+    st.error("Erro: Coluna 'Categoria' não encontrada nos dados processados.")
+    st.write("Colunas disponíveis:", banco_final.columns.tolist())
+    st.stop()
 
 # --- Barra Lateral: Filtros ---
 st.sidebar.header("Filtros de Análise")
