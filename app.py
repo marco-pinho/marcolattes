@@ -168,12 +168,25 @@ if not anos_disponiveis:
     st.sidebar.warning("Não há anos disponíveis para filtro nos dados processados.")
     st.stop()
 
-# Seletor de ano
-ano_inicio, ano_fim = st.sidebar.select_slider(
-    "📅 Selecione o Período de Análise:",
-    options=anos_disponiveis,
-    value=(min(anos_disponiveis), max(anos_disponiveis))
-)
+# Seletor de ano com dois selectbox separados
+st.sidebar.markdown("### 📅 Período de Análise")
+col_ano1, col_ano2 = st.sidebar.columns(2)
+
+# Definir valor padrão para ano inicial (2025 se disponível, senão o mínimo)
+ano_inicial_padrao = 2025 if 2025 in anos_disponiveis else min(anos_disponiveis)
+
+with col_ano1:
+    ano_inicio = st.selectbox(
+        "Ano Inicial:",
+        options=anos_disponiveis,
+        index=anos_disponiveis.index(ano_inicial_padrao)
+    )
+with col_ano2:
+    ano_fim = st.selectbox(
+        "Ano Final:",
+        options=[ano for ano in anos_disponiveis if ano >= ano_inicio],
+        index=len([ano for ano in anos_disponiveis if ano >= ano_inicio]) - 1
+    )
 
 # Professores disponíveis após filtros de categoria e ano
 professores_disponiveis = sorted(
