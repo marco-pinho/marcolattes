@@ -188,18 +188,23 @@ with col_ano2:
         index=len([ano for ano in anos_disponiveis if ano >= ano_inicio]) - 1
     )
 
-# Professores disponíveis após filtros de categoria e ano
-professores_disponiveis = sorted(
-    banco_filtrado_categoria[
-        (banco_filtrado_categoria["Ano"] >= ano_inicio) &
-        (banco_filtrado_categoria["Ano"] <= ano_fim)
-    ]["Nome"].unique()
-)
+# Professores disponíveis: TODOS da categoria selecionada (independente do período)
+professores_disponiveis = sorted(banco_filtrado_categoria["Nome"].unique())
 
 professores_selecionados = st.sidebar.multiselect(
     "👥 Selecione os Professores:",
     options=professores_disponiveis,
     default=professores_disponiveis
+)
+
+# Campo para valor de referência no gráfico
+st.sidebar.markdown("---")
+valor_referencia = st.sidebar.number_input(
+    "📊 Linha de Referência (Pontos):",
+    min_value=0,
+    value=0,
+    step=50,
+    help="Adiciona linha horizontal tracejada no gráfico"
 )
 
 # Aplicar todos os filtros em cascata
@@ -238,8 +243,53 @@ with tab1:
             st.plotly_chart(fig_bar_qualis, use_container_width=True)
         with col2_graph:
             st.subheader("Pontuação Total por Professor")
-            pontos_por_prof = df_filtrado.groupby('Nome')['pontos'].sum().sort_values(ascending=False)
-            fig_bar = px.bar(pontos_por_prof, x=pontos_por_prof.index, y=pontos_por_prof.values, title="Ranking de Pontuação", labels={'y': 'Pontos', 'x': 'Professor'})
+
+            # Criar DataFrame com TODOS os professores selecionados
+            pontos_por_prof = df_filtrado.groupby('Nome')['pontos'].sum()
+
+            # Adicionar professores com zero pontos (não aparecem no groupby)
+            todos_professores = pd.Series(0, index=professores_selecionados)
+            pontos_completo = todos_professores.add(pontos_por_prof, fill_value=0)
+
+            # Ordenar por pontuação
+            pontos_completo = pontos_completo.sort_values(ascending=False)
+
+            # Criar DataFrame para plotagem
+            df_plot = pd.DataFrame({
+                'Professor': pontos_completo.index,
+                'Pontos': pontos_completo.values,
+                'Pontos_Real': pontos_completo.values
+            })
+
+            # Definir altura mínima visível para zeros
+            altura_minima = pontos_completo.max() * 0.01 if pontos_completo.max() > 0 else 1
+            df_plot['Pontos_Display'] = df_plot['Pontos_Real'].apply(lambda x: altura_minima if x == 0 else x)
+
+            # Definir cores: vermelho escuro para zero, azul para os demais
+            df_plot['Cor'] = df_plot['Pontos_Real'].apply(lambda x: '#8B0000' if x == 0 else '#1f77b4')
+
+            # Criar gráfico
+            fig_bar = px.bar(df_plot, x='Professor', y='Pontos_Display',
+                           title="Ranking de Pontuação",
+                           labels={'Pontos_Display': 'Pontos', 'Professor': 'Professor'},
+                           color='Cor',
+                           color_discrete_map="identity")
+
+            fig_bar.update_layout(showlegend=False)
+
+            # Adicionar linha horizontal tracejada se valor > 0
+            if valor_referencia > 0:
+                fig_bar.add_hline(y=valor_referencia, line_dash="dash",
+                                line_color="red", line_width=2,
+                                annotation_text=f"Meta: {valor_referencia}",
+                                annotation_position="right")
+
+            # Atualizar hover para mostrar pontos reais
+            fig_bar.update_traces(
+                hovertemplate='<b>%{x}</b><br>Pontos: %{customdata[0]}<extra></extra>',
+                customdata=df_plot[['Pontos_Real']].values
+            )
+
             st.plotly_chart(fig_bar, use_container_width=True, key="ranking_chart")
 
 with tab2:
