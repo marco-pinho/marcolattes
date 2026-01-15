@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(streamlit run:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdiciona seleção dinâmica entre Permanentes e Colaboradores\n\n- Modifica process_html_files\\(\\) para aceitar pasta como parâmetro obrigatório\n- Adiciona radio button para selecionar categoria \\(Permanentes/Colaboradores\\)\n- Remove pasta obsoleta html_permanente_2025/\n- Atualiza títulos da UI para refletir categoria selecionada\n- Adiciona pastas permanentes/ e colaboradores/ ao repositório\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAtualiza lista de colaboradores - Janeiro 2026\n\n- Remove 21 colaboradores antigos\n- Adiciona 8 novos colaboradores\n- Novos currículos: Ana Beatriz Vargas dos Santos, Ana Luiza de Mattos Guaraldi, Andrea Ribeiro Soares, Carlos Baptista Barcaui, Claudia Henrique da Costa, Danubia da Cunha de Sa Caputo, Denise Leite Maia Monteiro, Denizar Vianna Araujo\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
+    ]
+  }
+}
