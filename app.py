@@ -344,11 +344,35 @@ with tab2:
     if not professores_selecionados:
         st.warning("Selecione pelo menos um professor na barra lateral.")
     else:
+        # Calcular pontos por professor para destacar os com zero
+        pontos_por_prof_tab2 = df_filtrado.groupby('Nome')['pontos'].sum().to_dict()
+
+        # CSS para destacar professores sem produção
+        st.markdown("""
+        <style>
+            .professor-sem-producao {
+                background-color: rgba(255, 0, 0, 0.1);
+                border-left: 4px solid rgba(255, 0, 0, 0.4);
+                padding: 5px;
+                margin-bottom: 10px;
+                border-radius: 5px;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
         for professor in professores_selecionados:
+            pontos_prof = pontos_por_prof_tab2.get(professor, 0)
+
+            # Se zero pontos, adicionar destaque visual
+            if pontos_prof == 0:
+                st.markdown(f'<div class="professor-sem-producao">', unsafe_allow_html=True)
+
             with st.expander(f"Análise de {professor}", expanded=False):
                 prof_data = df_filtrado[df_filtrado["Nome"] == professor]
                 if prof_data.empty:
                     st.write("Nenhuma produção encontrada para este professor no período.")
+                    if pontos_prof == 0:
+                        st.markdown('</div>', unsafe_allow_html=True)
                     continue
                 
                 st.subheader("Produção Principal")
@@ -393,6 +417,10 @@ with tab2:
                 relacao_df_excel = relacao_df.reset_index().astype({'Número (n)': int, 'Pontuação Total': int})
                 excel_data = to_excel({"Producao_Principal": tabela_main, "Resumo_Qualis": resumo_qualis, "Relacao_A_B": relacao_df_excel})
                 st.download_button(label=f"📥 Baixar Relatório Excel de {professor}", data=excel_data, file_name=f"{professor}_relatorio_{ano_inicio}_{ano_fim}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"download_button_{professor}")
+
+            # Fechar div de destaque se professor tem zero pontos
+            if pontos_prof == 0:
+                st.markdown('</div>', unsafe_allow_html=True)
 
 with tab3:
     st.header("Tabela de Dados Completa")
