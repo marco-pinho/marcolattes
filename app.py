@@ -347,25 +347,24 @@ with tab2:
         # Calcular pontos por professor para destacar os com zero
         pontos_por_prof_tab2 = df_filtrado.groupby('Nome')['pontos'].sum().to_dict()
 
-        # CSS para destacar professores sem produção
-        st.markdown("""
-        <style>
-            .professor-sem-producao {
-                background-color: rgba(255, 0, 0, 0.1);
-                border-left: 4px solid rgba(255, 0, 0, 0.4);
-                padding: 5px;
-                margin-bottom: 10px;
-                border-radius: 5px;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-
-        for professor in professores_selecionados:
+        for idx, professor in enumerate(professores_selecionados):
             pontos_prof = pontos_por_prof_tab2.get(professor, 0)
 
-            # Se zero pontos, adicionar destaque visual
+            # Se zero pontos, criar container com fundo vermelho
             if pontos_prof == 0:
-                st.markdown(f'<div class="professor-sem-producao">', unsafe_allow_html=True)
+                # CSS específico para este expander
+                st.markdown(f"""
+                <style>
+                    .expander-{idx} div[data-testid="stExpander"] {{
+                        background-color: rgba(255, 100, 100, 0.15);
+                        border-radius: 5px;
+                    }}
+                    .expander-{idx} div[data-testid="stExpander"] summary {{
+                        background-color: rgba(255, 100, 100, 0.25) !important;
+                    }}
+                </style>
+                <div class="expander-{idx}">
+                """, unsafe_allow_html=True)
 
             with st.expander(f"Análise de {professor}", expanded=False):
                 prof_data = df_filtrado[df_filtrado["Nome"] == professor]
