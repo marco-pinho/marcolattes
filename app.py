@@ -347,31 +347,28 @@ with tab2:
         # Calcular pontos por professor para destacar os com zero
         pontos_por_prof_tab2 = df_filtrado.groupby('Nome')['pontos'].sum().to_dict()
 
-        for idx, professor in enumerate(professores_selecionados):
+        # CSS para colorir texto em vermelho
+        st.markdown("""
+        <style>
+            .professor-zero-pontos {
+                color: red !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+        for professor in professores_selecionados:
             pontos_prof = pontos_por_prof_tab2.get(professor, 0)
 
-            # Se zero pontos, criar container com fundo vermelho
+            # Definir label com indicador visual se zero pontos
             if pontos_prof == 0:
-                # CSS específico para este expander
-                st.markdown(f"""
-                <style>
-                    .expander-{idx} div[data-testid="stExpander"] {{
-                        background-color: rgba(255, 100, 100, 0.15);
-                        border-radius: 5px;
-                    }}
-                    .expander-{idx} div[data-testid="stExpander"] summary {{
-                        background-color: rgba(255, 100, 100, 0.25) !important;
-                    }}
-                </style>
-                <div class="expander-{idx}">
-                """, unsafe_allow_html=True)
+                label_professor = f":red[Análise de {professor}]"
+            else:
+                label_professor = f"Análise de {professor}"
 
-            with st.expander(f"Análise de {professor}", expanded=False):
+            with st.expander(label_professor, expanded=False):
                 prof_data = df_filtrado[df_filtrado["Nome"] == professor]
                 if prof_data.empty:
                     st.write("Nenhuma produção encontrada para este professor no período.")
-                    if pontos_prof == 0:
-                        st.markdown('</div>', unsafe_allow_html=True)
                     continue
                 
                 st.subheader("Produção Principal")
@@ -416,10 +413,6 @@ with tab2:
                 relacao_df_excel = relacao_df.reset_index().astype({'Número (n)': int, 'Pontuação Total': int})
                 excel_data = to_excel({"Producao_Principal": tabela_main, "Resumo_Qualis": resumo_qualis, "Relacao_A_B": relacao_df_excel})
                 st.download_button(label=f"📥 Baixar Relatório Excel de {professor}", data=excel_data, file_name=f"{professor}_relatorio_{ano_inicio}_{ano_fim}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"download_button_{professor}")
-
-            # Fechar div de destaque se professor tem zero pontos
-            if pontos_prof == 0:
-                st.markdown('</div>', unsafe_allow_html=True)
 
 with tab3:
     st.header("Tabela de Dados Completa")
