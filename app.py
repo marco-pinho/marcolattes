@@ -256,10 +256,25 @@ with tab1:
             # Garantir a ordem correta do Qualis
             qualis_order = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C"]
             qualis_counts = qualis_counts.reindex(qualis_order, fill_value=0)
-            fig_bar_qualis = px.bar(qualis_counts, x=qualis_counts.index, y=qualis_counts.values,
+
+            # Definir cores personalizadas: A1-A4 verde escuro, B1 laranja escuro, B2-C vermelho
+            cores_qualis = {
+                "A1": "#006400", "A2": "#006400", "A3": "#006400", "A4": "#006400",
+                "B1": "#FF8C00",
+                "B2": "#DC143C", "B3": "#DC143C", "B4": "#DC143C", "C": "#DC143C"
+            }
+
+            df_qualis_plot = pd.DataFrame({
+                'Qualis': qualis_counts.index,
+                'Porcentagem': qualis_counts.values
+            })
+            df_qualis_plot['Cor'] = df_qualis_plot['Qualis'].map(cores_qualis)
+
+            fig_bar_qualis = px.bar(df_qualis_plot, x='Qualis', y='Porcentagem',
                                     title="Distribuição Percentual por Qualis",
-                                    labels={'y': 'Porcentagem (%)', 'x': 'Qualis'},
-                                    color_discrete_sequence=px.colors.sequential.RdBu)
+                                    labels={'Porcentagem': 'Porcentagem (%)', 'Qualis': 'Qualis'},
+                                    color='Cor',
+                                    color_discrete_map="identity")
             fig_bar_qualis.update_layout(showlegend=False, height=350)
             st.plotly_chart(fig_bar_qualis, use_container_width=True)
         with col2_graph:
@@ -296,7 +311,18 @@ with tab1:
                            color='Cor',
                            color_discrete_map="identity")
 
-            fig_bar.update_layout(showlegend=False, height=350)
+            fig_bar.update_layout(showlegend=False, height=700)
+
+            # Colorir nomes dos professores no eixo X (vermelho para zero pontos)
+            ticktext = df_plot['Professor'].tolist()
+            tickvals = list(range(len(ticktext)))
+            colors_x = ['red' if pontos == 0 else 'black' for pontos in df_plot['Pontos_Real']]
+
+            fig_bar.update_xaxes(
+                tickmode='array',
+                tickvals=tickvals,
+                ticktext=[f'<span style="color:{colors_x[i]};">{ticktext[i]}</span>' for i in range(len(ticktext))]
+            )
 
             # Adicionar linha horizontal tracejada se valor > 0
             if valor_referencia > 0:
