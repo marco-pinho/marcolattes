@@ -188,23 +188,33 @@ with col_ano2:
         index=len([ano for ano in anos_disponiveis if ano >= ano_inicio]) - 1
     )
 
-# Professores disponíveis: TODOS da categoria selecionada (independente do período)
-professores_disponiveis = sorted(banco_filtrado_categoria["Nome"].unique())
-
-professores_selecionados = st.sidebar.multiselect(
-    "👥 Selecione os Professores:",
-    options=professores_disponiveis,
-    default=professores_disponiveis
-)
-
 # Campo para valor de referência no gráfico
-st.sidebar.markdown("---")
 valor_referencia = st.sidebar.number_input(
     "📊 Linha de Referência (Pontos):",
     min_value=0,
     value=0,
     step=50,
     help="Adiciona linha horizontal tracejada no gráfico"
+)
+
+st.sidebar.markdown("---")
+
+# Professores disponíveis: TODOS da categoria selecionada (independente do período)
+professores_disponiveis = sorted(banco_filtrado_categoria["Nome"].unique())
+
+# CSS customizado para altura do multiselect
+st.markdown("""
+<style>
+    div[data-baseweb="select"] > div {
+        max-height: 140px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+professores_selecionados = st.sidebar.multiselect(
+    "👥 Selecione os Professores:",
+    options=professores_disponiveis,
+    default=professores_disponiveis
 )
 
 # Aplicar todos os filtros em cascata
@@ -223,12 +233,23 @@ with tab1:
     if df_filtrado.empty:
         st.warning("Nenhum dado encontrado para os filtros selecionados.")
     else:
+        # Métricas com tamanho reduzido
+        st.markdown("""
+        <style>
+            div[data-testid="metric-container"] {
+                transform: scale(0.7);
+                transform-origin: left top;
+                margin-bottom: -20px;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
         col1, col2, col3 = st.columns(3)
         col1.metric("Total de Pontos", f"{df_filtrado['pontos'].sum():,.0f}")
         col2.metric("Total de Artigos", f"{len(df_filtrado):,}")
         col3.metric("Professores na Seleção", f"{len(professores_selecionados):,}")
         st.markdown("---")
-        col1_graph, col2_graph = st.columns([1, 2])
+        col1_graph, col2_graph = st.columns([1, 3])
         with col1_graph:
             st.subheader("Artigos por Qualis (%)")
             qualis_counts = df_filtrado['qualis'].value_counts(normalize=True).mul(100).sort_index()
@@ -239,7 +260,7 @@ with tab1:
                                     title="Distribuição Percentual por Qualis",
                                     labels={'y': 'Porcentagem (%)', 'x': 'Qualis'},
                                     color_discrete_sequence=px.colors.sequential.RdBu)
-            fig_bar_qualis.update_layout(showlegend=False)
+            fig_bar_qualis.update_layout(showlegend=False, height=350)
             st.plotly_chart(fig_bar_qualis, use_container_width=True)
         with col2_graph:
             st.subheader("Pontuação Total por Professor")
@@ -275,7 +296,7 @@ with tab1:
                            color='Cor',
                            color_discrete_map="identity")
 
-            fig_bar.update_layout(showlegend=False)
+            fig_bar.update_layout(showlegend=False, height=350)
 
             # Adicionar linha horizontal tracejada se valor > 0
             if valor_referencia > 0:
