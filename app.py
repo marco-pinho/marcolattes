@@ -45,7 +45,7 @@ def process_all_html_files():
         if not os.path.isdir(base_path):
             continue
 
-        html_files = [os.path.join(base_path, f) for f in os.listdir(base_path) if f.endswith(".html")]
+        html_files = [os.path.join(base_path, f) for f in os.listdir(base_path) if f.endswith((".html", ".htm"))]
 
         for file_path in html_files:
             try:
