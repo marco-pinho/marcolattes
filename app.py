@@ -316,12 +316,13 @@ with tab1:
             # Colorir nomes dos professores no eixo X (vermelho para zero pontos)
             ticktext = df_plot['Professor'].tolist()
             tickvals = list(range(len(ticktext)))
-            colors_x = ['red' if pontos == 0 else 'black' for pontos in df_plot['Pontos_Real']]
+            colors_x = ['red' if pontos == 0 else 'white' for pontos in df_plot['Pontos_Real']]
 
             fig_bar.update_xaxes(
                 tickmode='array',
                 tickvals=tickvals,
-                ticktext=[f'<span style="color:{colors_x[i]};">{ticktext[i]}</span>' for i in range(len(ticktext))]
+                ticktext=[f'<span style="color:{colors_x[i]};">{ticktext[i]}</span>' for i in range(len(ticktext))],
+                tickangle=-90
             )
 
             # Adicionar linha horizontal tracejada se valor > 0
@@ -331,11 +332,13 @@ with tab1:
                                 annotation_text=f"Meta: {valor_referencia}",
                                 annotation_position="right")
 
-            # Atualizar hover para mostrar pontos reais
-            fig_bar.update_traces(
-                hovertemplate='<b>%{x}</b><br>Pontos: %{customdata[0]}<extra></extra>',
-                customdata=df_plot[['Pontos_Real']].values
-            )
+            # Atualizar hover para mostrar pontos reais (customdata por trace, pois
+            # color='Cor' divide o gráfico em duas séries - azul e vermelha - e cada
+            # uma precisa do subconjunto de pontos correspondente aos seus próprios nomes)
+            for trace in fig_bar.data:
+                trace.customdata = [[pontos_completo[nome]] for nome in trace.x]
+                trace.hovertemplate = '<b>%{x}</b><br>Pontos: %{customdata[0]}<extra></extra>'
+                trace.hoverlabel = dict(font=dict(color='white'))
 
             st.plotly_chart(fig_bar, use_container_width=True, key="ranking_chart")
 
