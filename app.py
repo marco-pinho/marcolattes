@@ -346,6 +346,48 @@ with tab1:
 
             st.plotly_chart(fig_bar, use_container_width=True, key="ranking_chart")
 
+        st.markdown("---")
+        st.subheader("Concentração em Qualis Superior (Artigos)")
+
+        n_total = len(df_filtrado)
+        n_A = df_filtrado['qualis'].astype(str).str.startswith('A').sum()
+        n_B = df_filtrado['qualis'].astype(str).str.startswith('B').sum()
+        n_A1A2 = df_filtrado['qualis'].isin(['A1', 'A2']).sum()
+        n_A1A4 = df_filtrado['qualis'].isin(['A1', 'A2', 'A3', 'A4']).sum()
+
+        def calc_pct(numerador, denominador):
+            return (numerador / denominador * 100) if denominador > 0 else 0
+
+        concentracao_df = pd.DataFrame({
+            'Métrica': ['A', 'B', 'A1+A2 / (A1..A4)', 'A1+A2 / Total Qualis', 'Todos A / Total Qualis'],
+            'Número (n)': [n_A, n_B, n_A1A2, n_A1A2, n_A],
+            'Base (n)': [n_A + n_B, n_A + n_B, n_A1A4, n_total, n_total],
+        })
+        concentracao_df['Porcentagem (%)'] = concentracao_df.apply(
+            lambda row: calc_pct(row['Número (n)'], row['Base (n)']), axis=1
+        )
+        concentracao_df['Rótulo'] = concentracao_df.apply(
+            lambda row: f"{row['Número (n)']:.0f}/{row['Base (n)']:.0f}", axis=1
+        )
+
+        col_conc_graph, col_conc_table = st.columns([2, 1])
+        with col_conc_graph:
+            fig_concentracao = px.bar(
+                concentracao_df, x='Métrica', y='Porcentagem (%)',
+                text='Rótulo',
+                title="Concentração em Qualis Superior (% de artigos, não pontos)",
+                color_discrete_sequence=['#1f77b4']
+            )
+            fig_concentracao.update_traces(textposition='outside')
+            fig_concentracao.update_layout(yaxis_range=[0, 105], height=400)
+            st.plotly_chart(fig_concentracao, use_container_width=True, key="concentracao_chart")
+        with col_conc_table:
+            st.dataframe(
+                concentracao_df.set_index('Métrica')[['Número (n)', 'Base (n)', 'Porcentagem (%)']]
+                .astype({'Número (n)': int, 'Base (n)': int})
+                .style.format({'Porcentagem (%)': '{:.1f}%'})
+            )
+
 with tab2:
     st.header("Análise Detalhada por Professor")
     if not professores_selecionados:
