@@ -71,8 +71,12 @@ def process_all_html_files():
                     titulo_match = re.search(r"(?<=titulo=)[^&]+", cvuri_text)
                     titulo = titulo_match.group(0) if titulo_match else "Título não encontrado"
 
-                    revista_match = re.search(r"(?<=nomePeriodico=)[^&]+", cvuri_text)
-                    revista = revista_match.group(0) if revista_match else "Revista não encontrada"
+                    # nomePeriodico é sempre o último parâmetro do cvuri; capturamos até o
+                    # fim da string porque nomes de revista com "&" (ex.: "Arthritis &
+                    # Rheumatology") são gravados pelo Lattes com o mesmo separador "&amp;"
+                    # usado entre parâmetros, então parar no primeiro "&" trunca o nome.
+                    revista_match = re.search(r"(?<=nomePeriodico=).+$", cvuri_text)
+                    revista = revista_match.group(0).strip() if revista_match else "Revista não encontrada"
 
                     ano_node = article.select_one("span.informacao-artigo[data-tipo-ordenacao='ano']")
                     ano = ano_node.get_text(strip=True) if ano_node else None
