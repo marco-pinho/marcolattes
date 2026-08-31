@@ -111,7 +111,16 @@ def calculate_points(_df, qualis_df):
     df_merged["qualis"] = df_merged["qualis"].fillna("C").replace("-", "C")
     pontos_map = {"A1": 100, "A2": 80, "A3": 60, "A4": 40, "B1": 30, "B2": 20, "B3": 10, "B4": 5, "C": 0}
     df_merged["pontos"] = df_merged["qualis"].map(pontos_map).fillna(0)
+    df_merged["octil"] = df_merged["qualis"].map(qualis_para_octil)
     return df_merged
+
+QUALIS_TO_OCTIL = {
+    "A1": "Octil_1", "A2": "Octil_2", "A3": "Octil_3", "A4": "Octil_4",
+    "B1": "Octil_5", "B2": "Octil_6", "B3": "Octil_7", "B4": "Octil_8",
+}
+
+def qualis_para_octil(qualis):
+    return QUALIS_TO_OCTIL.get(qualis, "Não pontua")
 
 def to_excel(dfs_dict):
     """Escreve um dicionário de DataFrames para um objeto BytesIO em formato Excel com encoding UTF-8."""
@@ -255,7 +264,7 @@ with tab1:
         st.markdown("---")
         col1_graph, col2_graph = st.columns([1, 3])
         with col1_graph:
-            st.subheader("Artigos por Qualis (%)")
+            st.subheader("Artigos por Octil (%)")
             qualis_counts = df_filtrado['qualis'].value_counts(normalize=True).mul(100).sort_index()
             # Garantir a ordem correta do Qualis
             qualis_order = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C"]
@@ -270,13 +279,14 @@ with tab1:
 
             df_qualis_plot = pd.DataFrame({
                 'Qualis': qualis_counts.index,
+                'Octil': [qualis_para_octil(q) for q in qualis_counts.index],
                 'Porcentagem': qualis_counts.values
             })
             df_qualis_plot['Cor'] = df_qualis_plot['Qualis'].map(cores_qualis)
 
-            fig_bar_qualis = px.bar(df_qualis_plot, x='Qualis', y='Porcentagem',
-                                    title="Distribuição Percentual por Qualis",
-                                    labels={'Porcentagem': 'Porcentagem (%)', 'Qualis': 'Qualis'},
+            fig_bar_qualis = px.bar(df_qualis_plot, x='Octil', y='Porcentagem',
+                                    title="Distribuição Percentual por Octil",
+                                    labels={'Porcentagem': 'Porcentagem (%)', 'Octil': 'Octil'},
                                     color='Cor',
                                     color_discrete_map="identity")
             fig_bar_qualis.update_layout(showlegend=False, height=350)
@@ -347,7 +357,7 @@ with tab1:
             st.plotly_chart(fig_bar, use_container_width=True, key="ranking_chart")
 
         st.markdown("---")
-        st.subheader("Concentração em Qualis Superior (Artigos)")
+        st.subheader("Concentração em Qualidade Superior (Artigos)")
 
         n_total = len(df_filtrado)
         n_A = df_filtrado['qualis'].astype(str).str.startswith('A').sum()
@@ -359,7 +369,7 @@ with tab1:
             return (numerador / denominador * 100) if denominador > 0 else 0
 
         concentracao_df = pd.DataFrame({
-            'Métrica': ['A', 'B', 'A1+A2 / (A1..A4)', 'A1+A2 / Total Qualis', 'Todos A / Total Qualis'],
+            'Métrica': ['Octil (1-4)', 'Octil (5-8)', 'Octil_1+Octil_2 / Octil (1-4)', 'Octil_1+Octil_2 / Total', 'Octil (1-4) / Total'],
             'Número (n)': [n_A, n_B, n_A1A2, n_A1A2, n_A],
             'Base (n)': [n_A + n_B, n_A + n_B, n_A1A4, n_total, n_total],
         })
@@ -375,7 +385,7 @@ with tab1:
             fig_concentracao = px.bar(
                 concentracao_df, x='Métrica', y='Porcentagem (%)',
                 text='Rótulo',
-                title="Concentração em Qualis Superior (% de artigos, não pontos)",
+                title="Concentração em Qualidade Superior (% de artigos, não pontos)",
                 color_discrete_sequence=['#1f77b4']
             )
             fig_concentracao.update_traces(textposition='outside')
@@ -421,36 +431,38 @@ with tab2:
                     continue
                 
                 st.subheader("Produção Principal")
-                tabela_main = prof_data[['Titulo', 'Ano', 'Revista', 'qualis', 'pontos']].copy()
+                tabela_main = prof_data[['Titulo', 'Ano', 'Revista', 'octil', 'pontos']].copy()
                 st.dataframe(tabela_main)
-                
-                st.subheader("Resumo por Qualis")
+
+                st.subheader("Resumo por Octil")
                 pesos = pd.DataFrame([{"qualis": "A1", "peso": 100}, {"qualis": "A2", "peso": 80}, {"qualis": "A3", "peso": 60}, {"qualis": "A4", "peso": 40}, {"qualis": "B1", "peso": 30}, {"qualis": "B2", "peso": 20}, {"qualis": "B3", "peso": 10}, {"qualis": "B4", "peso": 5}, {"qualis": "C", "peso": 0}])
+                pesos['octil'] = pesos['qualis'].map(qualis_para_octil)
                 por_qualis = prof_data.groupby('qualis').size().reset_index(name='n')
                 resumo_qualis = pesos.merge(por_qualis, on='qualis', how='left').fillna(0)
                 resumo_qualis['pontos'] = resumo_qualis['n'] * resumo_qualis['peso']
-                st.dataframe(resumo_qualis)
+                st.dataframe(resumo_qualis[['octil', 'peso', 'n', 'pontos']])
 
-                # Gráfico de barras para o Qualis do professor
-                st.subheader("Distribuição Percentual por Qualis")
+                # Gráfico de barras para o Octil do professor
+                st.subheader("Distribuição Percentual por Octil")
                 qualis_counts_prof = prof_data['qualis'].value_counts(normalize=True).mul(100).sort_index()
                 qualis_order = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C"]
                 qualis_counts_prof = qualis_counts_prof.reindex(qualis_order, fill_value=0)
-                fig_bar_prof = px.bar(qualis_counts_prof, x=qualis_counts_prof.index, y=qualis_counts_prof.values,
-                                      labels={'y': 'Porcentagem (%)', 'x': 'Qualis'},
+                octil_labels_prof = [qualis_para_octil(q) for q in qualis_counts_prof.index]
+                fig_bar_prof = px.bar(qualis_counts_prof, x=octil_labels_prof, y=qualis_counts_prof.values,
+                                      labels={'y': 'Porcentagem (%)', 'x': 'Octil'},
                                       color_discrete_sequence=px.colors.sequential.RdBu)
                 fig_bar_prof.update_layout(showlegend=False)
                 st.plotly_chart(fig_bar_prof, use_container_width=True, key=f"qualis_chart_{professor}")
 
-                st.subheader("Relação Produção A vs. B")
+                st.subheader("Relação Produção Octil (1-4) vs. Octil (5-8)")
                 n_A = resumo_qualis[resumo_qualis['qualis'].str.startswith('A')]['n'].sum()
                 pontos_A = resumo_qualis[resumo_qualis['qualis'].str.startswith('A')]['pontos'].sum()
                 n_B = resumo_qualis[resumo_qualis['qualis'].str.startswith('B')]['n'].sum()
                 pontos_B = resumo_qualis[resumo_qualis['qualis'].str.startswith('B')]['pontos'].sum()
                 total_n_AB = n_A + n_B
-                
+
                 relacao_df = pd.DataFrame({
-                    "Categoria": ["Total (A+B)", "A", "B"],
+                    "Categoria": ["Total", "Octil (1-4)", "Octil (5-8)"],
                     "Número (n)": [total_n_AB, n_A, n_B],
                     "Porcentagem (%)": [100, int((n_A / total_n_AB * 100)) if total_n_AB > 0 else 0, int((n_B / total_n_AB * 100)) if total_n_AB > 0 else 0],
                     "Pontuação Total": [pontos_A + pontos_B, pontos_A, pontos_B]
@@ -470,7 +482,7 @@ with tab3:
     else:
         # Remover colunas 'Unnamed'
         df_display = df_filtrado.loc[:, ~df_filtrado.columns.str.startswith('Unnamed')]
-        df_display = df_display.drop(columns=['WOS', 'Scopus'], errors='ignore')
+        df_display = df_display.drop(columns=['WOS', 'Scopus', 'qualis'], errors='ignore')
         st.dataframe(df_display)
 
         # Gerar Excel dos dados completos
